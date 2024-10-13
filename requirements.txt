@@ -1,0 +1,8 @@
+numpy
+tqdm
+torch
+peft
+transformers>=4.39.1
+datasets
+evaluate
+scikit-learn
