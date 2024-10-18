@@ -31,7 +31,6 @@ from peft import LoraConfig, get_peft_model
 from l3prune import LLMEncoder, l3prune
 from l3prune.dataset.utils import load_dataset
 from l3prune.loss.utils import load_loss
-from l3prune.experiment_utils import generate_experiment_id
 
 from tqdm import tqdm
 
@@ -402,31 +401,6 @@ def main():
     if training_args.gradient_checkpointing:
         training_args.gradient_checkpointing_kwargs = {"use_reentrant": False}
 
-    if custom_args.experiment_id is not None:
-        experiment_id = custom_args.experiment_id
-    else:
-        experiment_id = generate_experiment_id(
-            name=data_args.dataset_name,
-            split="train",
-            model_name=(
-                model_args.model_name_or_path
-                if "/" not in model_args.model_name_or_path
-                else model_args.model_name_or_path.split("/")[-1]
-            ),
-            pooling_mode=model_args.pooling_mode,
-            train_batch_size=training_args.per_device_train_batch_size
-            * accelerator.num_processes
-            * training_args.gradient_accumulation_steps,
-            max_seq_length=model_args.max_seq_length,
-            epochs=training_args.num_train_epochs,
-            seed=training_args.seed,
-            warmup_steps=training_args.warmup_steps,
-            lr=training_args.learning_rate,
-            lora_r=custom_args.lora_r,
-        )
-
-    training_args.output_dir = f"{training_args.output_dir}/{experiment_id}"
-
     # TODO: can also pass separator arg here
     train_dataset = load_dataset(
         data_args.dataset_name,
@@ -473,11 +447,21 @@ def main():
             prunes = (small_p, large_p)
         elif model_args.autoprune == "all":
             prunes = tuple(model_args.percent_prune) + (small_p, large_p)
+        else:
+            raise ValueError("Invalid autoprune value")
     else:
         prunes = model_args.percent_prune
     
     logger.info(f"Pruning configurations: {prunes}")
+    output_dir = training_args.output_dir
     for p in prunes:
+        if custom_args.experiment_id is not None:
+            experiment_id = custom_args.experiment_id
+        else:
+            experiment_id = p
+
+        training_args.output_dir = f"{output_dir}/{experiment_id}"
+
         # reset model
         model = LLMEncoder.from_pretrained(
             base_model_name_or_path=model_args.model_name_or_path,
