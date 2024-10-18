@@ -15,9 +15,9 @@ def encode_custom(forward, encoder, sentence_feature):
 
     return [encoder.get_pooling(sentence_feature, emb) for emb in reps]
 
-def l3prune(encoder, dataset, loss_fn, batch_size=64, num_samples=100):
+def l3prune(encoder, dataset, loss_fn, batch_size=64, num_batches=100):
     dataset = [t for t in dataset]
-    subset = random.sample(dataset, batch_size*num_samples)
+    subset = random.sample(dataset, batch_size*num_batches)
     subset = [[encoder.prepare_for_tokenization(t) for t in s.texts] for s in subset]
     subset = [subset[i:i + batch_size] for i in range(0, len(subset), batch_size)]
 
