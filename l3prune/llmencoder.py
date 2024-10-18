@@ -387,7 +387,7 @@ class LLMEncoder(nn.Module):
         self.model.save_pretrained(output_path)
         self.tokenizer.save_pretrained(output_path)
 
-        llm2vec_config = {
+        l3prune_config = {
             "pooling_mode": self.pooling_mode,
             "max_length": self.max_length,
             "doc_max_length": self.doc_max_length,
@@ -397,7 +397,7 @@ class LLMEncoder(nn.Module):
         if save_config:
             os.makedirs(output_path, exist_ok=True)
             with open(f"{output_path}/l3prune_config.json", "w") as fOut:
-                json.dump(llm2vec_config, fOut, indent=4)
+                json.dump(l3prune_config, fOut, indent=4)
 
     def _encode(
         self,
