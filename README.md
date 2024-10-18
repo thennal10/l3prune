@@ -2,7 +2,7 @@
 # L3Prune: Large Language Models Are Overparameterized Text Encoders
 
 
-L3Prune is a pruning method for LLM-based text encoders. Based simple layer-dropping and supervised fine-tuning, L3Prune can reduce the number of parameters of an LLM-based text encoder by 30% with negligible performance loss and up to 80% while maintaining reasonable performance.
+L3Prune is a pruning method for LLM-based text encoders. Based simple layer-dropping and supervised fine-tuning, L3Prune can reduce the number of parameters of an LLM-based text encoder by 30% with negligible performance loss and up to 80% while maintaining reasonable performance. Much of this codebase is adapted from the [LLM2Vec repository](https://github.com/McGill-NLP/llm2vec).
 
 ## Overview
 
