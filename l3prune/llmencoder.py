@@ -89,8 +89,8 @@ class LLMEncoder(nn.Module):
         config = {}
         if os.path.exists(f"{base_model_name_or_path}/l3prune_config.json"):
             with open(f"{base_model_name_or_path}/l3prune_config.json", "r") as fIn:
-                llm2vec_config = json.load(fIn)
-            config.update(llm2vec_config)
+                l3prune_config = json.load(fIn)
+            config.update(l3prune_config)
 
         for key, value in encoder_args.items():
             config[key] = value
