@@ -2,6 +2,8 @@
 # L3Prune: Large Language Models Are Overparameterized Text Encoders
 
 
+[![arxiv](https://img.shields.io/badge/arXiv-2410.14578-b31b1b.svg)](https://arxiv.org/abs/2410.14578)
+
 L3Prune is a pruning method for LLM-based text encoders. Based simple layer-dropping and supervised fine-tuning, L3Prune can reduce the number of parameters of an LLM-based text encoder by 30% with negligible performance loss and up to 80% while maintaining reasonable performance. Much of this codebase is adapted from the [LLM2Vec repository](https://github.com/McGill-NLP/llm2vec).
 
 ## Overview
@@ -15,7 +17,7 @@ config.num_hidden_layers = n
 
 Supervised finetuning (generally paramater-efficient) is considered the most effective strategy to convert LLMs to effective text encoders. By applying said supervised finetuning after pruning, the lost performance is recovered. Thus, this method is easily integrated into any LLM-to-text-encoder pipeline, and can be applied without additional computation.
 
-L3Prune goes further, and uses the initial layerwise loss of the base model as a guideline to pick layers to prune to. Two pruning configurations, `large` and `small` are produced by L3Prune, usable in different circumstances. `large` in particular has a negligible performance drop, while shaving off 21% of the model's parameters on average. Refer to the paper for more details.
+L3Prune goes further, and uses the initial layerwise loss of the base model as a guideline to pick layers to prune to. Two pruning configurations, `large` and `small` are produced by L3Prune, usable in different circumstances. `large` in particular has a negligible performance drop, while shaving off 21% of the model's parameters on average. Refer to [our paper](https://arxiv.org/abs/2410.14578) for more details.
 
 
 ## Installation
@@ -132,7 +134,7 @@ small_p, large_p = l3prune(encoder, dataset, loss_fn)
 
 ## Training 
 
-We use the public portion of dataset used in [Improving Text Embeddings with Large Language Models](https://arxiv.org/abs/2401.00368), curated by authors of [Repetition Improves Language Model Embeddings](https://arxiv.org/abs/2402.15449). The full description of the dataset can be found in Appendix A of our paper as well. The dataset can be downloaded from the [GitHub page of Echo embeddings repository](https://github.com/jakespringer/echo-embeddings#training). To use the training script, the downloaded dataset should be placed in the `cache` directory. The directory layout should be as follows:
+We use the public portion of dataset used in [Improving Text Embeddings with Large Language Models](https://arxiv.org/abs/2401.00368), curated by authors of [Repetition Improves Language Model Embeddings](https://arxiv.org/abs/2402.15449). The full description of the dataset can be found in Appendix A of [our paper](https://arxiv.org/abs/2410.14578) as well. The dataset can be downloaded from the [GitHub page of Echo embeddings repository](https://github.com/jakespringer/echo-embeddings#training). To use the training script, the downloaded dataset should be placed in the `cache` directory. The directory layout should be as follows:
 
 ```
 cache
@@ -189,3 +191,18 @@ Of particular note is the `percent_prune` and `autoprune` configurations. `perce
 - `large`: Apply L3Prune, and prune and train only the `large` configuration.
 - `small+large`: Apply L3Prune, and prune and train both the `small` and `large` configurations.
 - `all`: Apply L3Prune, and prune and train all configurations in `percent_prune`, as well as the `small` and `large` configurations.
+
+
+## Citation
+If you find our work helpful, please cite us:
+```bibtex
+@misc{k2024largelanguagemodelsoverparameterized,
+      title={Large Language Models Are Overparameterized Text Encoders}, 
+      author={Thennal D K and Tim Fischer and Chris Biemann},
+      year={2024},
+      eprint={2410.14578},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2410.14578}, 
+}
+```
