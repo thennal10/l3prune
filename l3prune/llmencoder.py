@@ -56,12 +56,14 @@ class LLMEncoder(nn.Module):
     def from_pretrained(
         self,
         base_model_name_or_path,
+        peft_model_name_or_path=None,
         **kwargs,
     ):
         """
         Load a pretrained model from a model identifier or path.
         Args:
             base_model_name_or_path: Model identifier or path to pretrained model.
+            peft_model_name_or_path: Path to any PEFT models to apply.
         Returns: L3Prune model.
         """
 
@@ -85,6 +87,13 @@ class LLMEncoder(nn.Module):
                 config_dict = json.load(fIn)
             config = PretrainedConfig.from_dict(config_dict)
             model.config._name_or_path = config._name_or_path
+
+        if peft_model_name_or_path is not None:
+            model = PeftModel.from_pretrained(
+                model,
+                peft_model_name_or_path,
+            )
+            model = model.merge_and_unload()
 
         config = {}
         if os.path.exists(f"{base_model_name_or_path}/l3prune_config.json"):
