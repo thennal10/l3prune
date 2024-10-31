@@ -32,7 +32,7 @@ pip install -r requirements.txt
 The LLMEncoder class is a wrapper around the HuggingFace transformers library, and can be used to encode text. It can be directly pruned using the `prune` method by passing the desired pruning percentage.
 
 ### Preparing the model
-The `from_pretrained` method of an LLMEncoder takes a base model identifier/path. All HuggingFace model loading arguments can be passed to `from_pretrained` method. The `pooling_mode` argument can be used to change the pooling strategy, and the `max_length` argument can be used to change the maximum sequence length.
+The `from_pretrained` method of an LLMEncoder takes a model identifier/path. All HuggingFace model loading arguments can be passed to `from_pretrained` method. LLMEncoder-specific configurations can be passed with the `LLMEncoderConfig` class (otherwise taken from `config.json`, or set to default).
 
 ```python
 import torch
@@ -41,11 +41,21 @@ from l3prune import LLMEncoder
 encoder = LLMEncoder.from_pretrained(
     "meta-llama/Meta-Llama-3-8B-Instruct",
     device_map="cuda" if torch.cuda.is_available() else "cpu",
-    pooling_mode="weighted_mean",
     torch_dtype=torch.bfloat16,
 )
 ```
 
+You can also simply use `AutoModel` to load the model in. If you only require inference and basic pruning, the library is unecessary.
+```py
+import torch
+from transformers import AutoModel
+
+encoder = AutoModel.from_pretrained(
+    "thennal/L3Prune-Mistral-7B-Instruct-v0.2-large",
+    device_map="cuda" if torch.cuda.is_available() else "cpu",
+    torch_dtype=torch.bfloat16,
+)
+```
 ### Basic Pruning
 
 Simple layer-dropping can be done by calling the `prune` method of the encoder, which takes the desired pruning percentage as an argument. If the pruning percentage is greater than or equal to 1, it is instead taken as the specific layer number to prune to.
@@ -54,6 +64,11 @@ Simple layer-dropping can be done by calling the `prune` method of the encoder, 
 encoder.prune(0.3) # Prune 30% of the model
 # OR
 encoder.prune(8) # Prune to the 8th layer (if the model had 32 layers, this would be equivalent to p=0.75)
+```
+
+Pruning updates the model configs, so the pruned model can be saved and retrieved directly via `save_pretrained` and `load_pretrained`.
+```python
+encoder.save_pretrained("./meta-llama/Meta-Llama-3-8B-Instruct-pruned")
 ```
 
 
