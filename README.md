@@ -100,8 +100,8 @@ cos_sim = torch.mm(q_reps_norm, d_reps_norm.transpose(0, 1))
 
 print(cos_sim)
 """
-tensor([[0.6470, 0.1619],
-        [0.0786, 0.5844]])
+tensor([[0.6832, 0.3353],
+        [0.3031, 0.6216]])
 """
 ```
 
