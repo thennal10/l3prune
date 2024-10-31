@@ -28,7 +28,7 @@ from transformers.trainer_utils import seed_worker
 
 from peft import LoraConfig, get_peft_model
 
-from l3prune import LLMEncoder, l3prune
+from l3prune import LLMEncoder, LLMEncoderConfig, l3prune
 from l3prune.dataset.utils import load_dataset
 from l3prune.loss.utils import load_loss
 
@@ -455,18 +455,25 @@ def main():
     logger.info(f"Pruning configurations: {prunes}")
     output_dir = training_args.output_dir
     for p in prunes:
-        if custom_args.experiment_id is not None:
-            experiment_id = custom_args.experiment_id
+        experiment_id = model_args.model_name_or_path
+        if model_args.autoprune:
+            if p == small_p:
+                experiment_id += "-small"
+            elif p == large_p:
+                experiment_id += "-large"
         else:
-            experiment_id = p
+            experiment_id += str(p)
 
-        training_args.output_dir = f"{output_dir}/{experiment_id}"
+        training_args.output_dir = f"{output_dir}{experiment_id}"
 
         # reset model
+        config = LLMEncoderConfig(
+            pooling_mode=model_args.pooling_mode,
+            max_length=model_args.max_seq_length
+        )
         model = LLMEncoder.from_pretrained(
             base_model_name_or_path=model_args.model_name_or_path,
-            pooling_mode=model_args.pooling_mode,
-            max_length=model_args.max_seq_length,
+            config=config,
             torch_dtype=torch_dtype,
             attn_implementation=model_args.attn_implementation,
             device_map="cuda"
@@ -500,7 +507,6 @@ def main():
             trainer.add_callback(StopTrainingCallback(custom_args.stop_after_n_steps))
 
         trainer.train()
-
 
 if __name__ == "__main__":
     main()

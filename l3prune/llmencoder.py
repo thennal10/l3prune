@@ -13,6 +13,7 @@ from transformers import (
     AutoModel,
     AutoConfig,
     PretrainedConfig,
+    PreTrainedModel,
     AutoTokenizer,
     LlamaConfig,
     MistralConfig,
@@ -33,30 +34,53 @@ def batch_to_device(batch, target_device: device):
     return batch
 
 
-class LLMEncoder(nn.Module):
+class LLMEncoderConfig(PretrainedConfig):
     def __init__(
         self,
-        model: AutoModel,
-        tokenizer: AutoTokenizer,
         pooling_mode: str = "weighted_mean",
         max_length: int = 512,
         doc_max_length: int = 400,
         skip_instruction: bool = True,
+        **kwargs,
     ):
-        super().__init__()
-        self.model = model
-        self.tokenizer = tokenizer
+        if pooling_mode not in ["mean", "weighted_mean", "eos_token", "bos_token"]:
+            raise ValueError(
+                (f"Pooling mode {pooling_mode} is not supported.",
+                "Please choose one of 'mean', 'weighted_mean', 'eos_token', 'bos_token'.")
+            )
         self.pooling_mode = pooling_mode
-        self.skip_instruction = skip_instruction
         self.max_length = max_length
         self.doc_max_length = doc_max_length
-        self.config = model.config
+        self.skip_instruction = skip_instruction
+        self.model_config = None
+        self.base_model = None
+        
+        super().__init__(**kwargs)
+
+class LLMEncoder(PreTrainedModel):
+    config_class = LLMEncoderConfig
+    
+    def __init__(
+        self,
+        model: PreTrainedModel,
+        tokenizer: AutoTokenizer,
+        config: LLMEncoderConfig
+    ):
+        super().__init__(config)
+        self.model = model
+        self.tokenizer = tokenizer
+        self.pooling_mode = config.pooling_mode
+        self.max_length = config.max_length
+        self.doc_max_length = config.doc_max_length
+        self.skip_instruction = config.skip_instruction
+        self.model_config = None
 
     @classmethod
     def from_pretrained(
         self,
         base_model_name_or_path,
         peft_model_name_or_path=None,
+        config=None,
         **kwargs,
     ):
         """
@@ -66,27 +90,26 @@ class LLMEncoder(nn.Module):
             peft_model_name_or_path: Path to any PEFT models to apply.
         Returns: L3Prune model.
         """
-
-        # pop out encoder args
-        keys = ["pooling_mode", "max_length", "doc_max_length", "skip_instruction"]
-        encoder_args = {
-            key: kwargs.pop(key, None) for key in keys if kwargs.get(key) is not None
-        }
-
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
+        
+        if not config:
+            config = LLMEncoderConfig()
+        
+        if not config.base_model:
+            config.base_model = base_model_name_or_path
+        
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path, trust_remote_code=True)
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
-
-        config = AutoConfig.from_pretrained(base_model_name_or_path)
-        model = AutoModel.from_pretrained(base_model_name_or_path, **kwargs)
-
-        if os.path.isdir(base_model_name_or_path) and os.path.exists(
-            f"{base_model_name_or_path}/config.json"
-        ):
-            with open(f"{base_model_name_or_path}/config.json", "r") as fIn:
-                config_dict = json.load(fIn)
-            config = PretrainedConfig.from_dict(config_dict)
-            model.config._name_or_path = config._name_or_path
+ 
+        if config.model_config:
+            model_config = AutoConfig.from_pretrained(config.base_model, trust_remote_code=True)
+            model_config = model_config.from_dict(config.model_config) 
+        else:
+            model_config = AutoConfig.from_pretrained(base_model_name_or_path, trust_remote_code=True)
+            config.model_config = model_config
+            
+        model = AutoModel.from_pretrained(base_model_name_or_path, config=model_config, trust_remote_code=True, **kwargs)
+        
 
         if peft_model_name_or_path is not None:
             model = PeftModel.from_pretrained(
@@ -95,16 +118,7 @@ class LLMEncoder(nn.Module):
             )
             model = model.merge_and_unload()
 
-        config = {}
-        if os.path.exists(f"{base_model_name_or_path}/l3prune_config.json"):
-            with open(f"{base_model_name_or_path}/l3prune_config.json", "r") as fIn:
-                l3prune_config = json.load(fIn)
-            config.update(l3prune_config)
-
-        for key, value in encoder_args.items():
-            config[key] = value
-
-        return self(model=model, tokenizer=tokenizer, **config)
+        return self(model=model, tokenizer=tokenizer, config=config)
 
     def prune(self, percent_prune=0):
         """
@@ -120,6 +134,7 @@ class LLMEncoder(nn.Module):
         print(f"Pruning to {new_num_layers} layer.")
         self.model.layers = self.model.layers[:new_num_layers]
         self.model.config.num_hidden_layers = new_num_layers
+        self.config.model_config.num_hidden_layers = new_num_layers
     
     def prepare_for_tokenization(self, text):
         if self.model.config._name_or_path == "meta-llama/Meta-Llama-3-8B-Instruct":
@@ -467,3 +482,11 @@ class LLMEncoder(nn.Module):
         self.model.gradient_checkpointing_enable(
             gradient_checkpointing_kwargs=gradient_checkpointing_kwargs
         )
+    
+    def save_pretrained(self, save_directory, **kwargs):
+        self.tokenizer.save_pretrained(save_directory, **kwargs)
+        super().save_pretrained(save_directory, **kwargs)
+    
+    def push_to_hub(self, repo_id, **kwargs):
+        self.tokenizer.push_to_hub(repo_id, **kwargs)
+        super().push_to_hub(repo_id, **kwargs)
